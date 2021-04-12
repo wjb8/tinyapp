@@ -3,16 +3,16 @@ const app = express();
 const PORT = 8080; //default port
 const bodyParser = require('body-parser');
 
-const generateRandomString(length) {
+const generateRandomString = (length) => {
   let result = [];
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-  for (const i = 0; i < length; i++) {
+  for (let i = 0; i < length; i++) {
     result.push(chars.charAt(Math.floor(Math.random() * chars.length)));
   }
   
   return result.join('');
-}
+};
 
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -33,12 +33,19 @@ app.get('/urls', (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
+  const shortened = generateRandomString(6);
   console.log(req.body);  // Log the POST request body to the console
-  res.send("Ok");
+  urlDatabase[shortened] = req.body.longURL;
+  res.redirect(`/urls/${shortened}`);
 });
 
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
+});
+
+app.get('/u/:shortURL', (req, res) => {
+  const longURL = urlDatabase[req.params.shortURL];
+  res.redirect(longURL);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
