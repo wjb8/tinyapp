@@ -24,7 +24,7 @@ const urlDatabase = {
 };
 
 app.get('/', (req, res) => {
-  res.send('Hello!');
+  res.send('Hello! Welcome to TinyApp!');
 });
 
 app.get('/urls', (req, res) => {
@@ -34,7 +34,7 @@ app.get('/urls', (req, res) => {
 
 app.post("/urls", (req, res) => {
   const shortened = generateRandomString(6);
-  console.log(req.body);  // Log the POST request body to the console
+  console.log(req.body);
   urlDatabase[shortened] = req.body.longURL;
   res.redirect(`/urls/${shortened}`);
 });
