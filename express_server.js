@@ -22,17 +22,6 @@ const formsAreEmpty = (req) => {
   return false;
 };
 
-// const emailAlreadyExists = (users, req) => {
-//   for (let user in users) {
-//     console.log(users[user].email);
-//     // console.log(req.body.email);
-//     if (users[user].email === req.body.email) {
-//       return true;
-//     }
-//   }
-//   return false;
-// };
-
 const getUserByEmail = (users, req) => {
   for (let user in users) {
     if (users[user].email === req.body.email) {
@@ -54,8 +43,8 @@ app.use(cookieParser());
 app.set('view engine', 'ejs');
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": {longURL: "http://www.lighthouselabs.ca", userID: "userRandomID"},
+  "9sm5xK": {longURL: "http://www.google.ca", userID: "user2RandomID"}
 };
 
 const users = {
@@ -140,13 +129,20 @@ app.get('/urls', (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
+  const user = req.cookies['user_id'];
   const shortened = generateRandomString(6);
-  urlDatabase[shortened] = req.body.longURL;
+  urlDatabase[shortened] = {longURL: req.body.longURL, userID: user};
   res.redirect(`/urls/${shortened}`);
 });
 
 app.get("/urls/new", (req, res) => {
   const user = req.cookies['user_id'];
+  
+  if (!user) {
+    res.redirect('/login');
+    return;
+  }
+  
   const templateVars = {user: users[user]};
   res.render("urls_new", templateVars);
 });
@@ -158,28 +154,23 @@ app.get('/u/:shortURL', (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const user = req.cookies['user_id'];
-  const templateVars = {user: users[user], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  console.log(urlDatabase);
+  const templateVars = {user: users[user], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
   res.render("urls_show", templateVars);
 });
 
 app.post('/urls/:shortURL/delete', (req, res) => {
   delete urlDatabase[req.params.shortURL];
-  console.log('Baleeted');
   res.redirect('/urls');
 });
 
 app.post('/urls/:shortURL/update', (req, res) => {
-  urlDatabase[req.params.shortURL] = req.body.longURL;
-  console.log('Updated longURL');
+  urlDatabase[req.params.shortURL].longURL = req.body.longURL;
   res.redirect('/urls');
 });
 
 app.get('/urls.json', (req, res) => {
   res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
 app.listen(PORT, () => {
