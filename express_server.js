@@ -3,6 +3,8 @@ const app = express();
 const PORT = 8080; //default port
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 const generateRandomString = (length) => {
   let result = [];
@@ -31,7 +33,7 @@ const getUserByEmail = (users, req) => {
 };
 
 const checkPassword = (users, req) => {
-  if (getUserByEmail(users, req).password === req.body.password) {
+  if (bcrypt.compareSync(req.body.password, getUserByEmail(users, req).password)) {
     return true;
   }
   return false;
@@ -75,13 +77,13 @@ app.get('/', (req, res) => {
   res.send('Hello! Welcome to TinyApp!');
 });
 
-app.get('/login', (req, res) => {
+app.get('/login', (req, res) => { //=>Render the login page
   const user = req.cookies['user_id'];
   const templateVars = {user: users[user]};
   res.render('login', templateVars);
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', (req, res) => {  //=>Handle login form submission
   
   if (formsAreEmpty(req)) {
     res.statusCode = 400;
@@ -105,18 +107,18 @@ app.post('/login', (req, res) => {
   res.redirect('/urls');
 });
 
-app.post('/logout', (req, res) => {
+app.post('/logout', (req, res) => { //=>Clear user_id cookie on logout
   res.clearCookie('user_id');
   res.redirect('/urls');
 });
 
-app.get('/register', (req, res) => {
+app.get('/register', (req, res) => {  //=>Render the register page
   const user = req.cookies['user_id'];
   const templateVars = {user: users[user]};
   res.render('register', templateVars);
 });
 
-app.post('/register', (req, res) => {
+app.post('/register', (req, res) => { //=>Handle register form submission
   
   if (formsAreEmpty(req)) {
     res.statusCode = 400;
@@ -131,19 +133,21 @@ app.post('/register', (req, res) => {
   }
 
   const id = generateRandomString(6);
-  users[id] = {id: id, email: req.body.email, password: req.body.password};
+  const password = req.body.password;
+  const hashedPassword = bcrypt.hashSync(password, saltRounds);
+  users[id] = {id: id, email: req.body.email, password: hashedPassword};
   res.cookie('user_id', getUserByEmail(users, req).id);
   res.redirect('/urls');
 });
 
-app.get('/urls', (req, res) => {
+app.get('/urls', (req, res) => {  //=>Render My URLs page
   const user = req.cookies['user_id'];
   const userURLs = urlsForUser(urlDatabase, req);
   const templateVars = {user: users[user], urls: userURLs};
   res.render('urls_index', templateVars);
 });
 
-app.post("/urls", (req, res) => {
+app.post("/urls", (req, res) => { //=> Create new URL
   const user = req.cookies['user_id'];
 
   if (req.body.longURL.startsWith('http://') || req.body.longURL.startsWith('https://')) {
@@ -158,7 +162,7 @@ app.post("/urls", (req, res) => {
   
 });
 
-app.get("/urls/new", (req, res) => {
+app.get("/urls/new", (req, res) => {  //=>Render create new URL page
   const user = req.cookies['user_id'];
   
   if (!user) {
@@ -170,18 +174,18 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
-app.get('/u/:shortURL', (req, res) => {
+app.get('/u/:shortURL', (req, res) => { //=>Redirect to long URL
   const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
-app.get("/urls/:shortURL", (req, res) => {
+app.get("/urls/:shortURL", (req, res) => {  //=>Render short URL update page
   const user = req.cookies['user_id'];
   const templateVars = {user: users[user], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
   res.render("urls_show", templateVars);
 });
 
-app.post('/urls/:shortURL/delete', (req, res) => {
+app.post('/urls/:shortURL/delete', (req, res) => {  //=>Handle short URL delete
   const user = req.cookies['user_id'];
   if (user !== urlDatabase[req.params.shortURL].userID) {
     res.statusCode = 401;
@@ -193,7 +197,7 @@ app.post('/urls/:shortURL/delete', (req, res) => {
   res.redirect('/urls');
 });
 
-app.post('/urls/:shortURL/update', (req, res) => {
+app.post('/urls/:shortURL/update', (req, res) => {  //=>Handle short URL update
   const user = req.cookies['user_id'];
   if (user !== urlDatabase[req.params.shortURL].userID) {
     res.statusCode = 401;
@@ -211,7 +215,7 @@ app.post('/urls/:shortURL/update', (req, res) => {
 
 });
 
-app.get('/urls.json', (req, res) => {
+app.get('/urls.json', (req, res) => { //=>List all short URLs in database
   res.json(urlDatabase);
 });
 
