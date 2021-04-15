@@ -4,7 +4,8 @@ const {
   formsAreEmpty,
   checkPassword,
   urlsForUser
-} = require('./helpers');
+} = require('./helpers'); //=>Helper functions
+
 const express = require('express');
 const app = express();
 const PORT = 8080; //default port
@@ -42,8 +43,8 @@ const users = {
   }
 };
 
-app.get('/', (req, res) => {
-  res.send('Hello! Welcome to TinyApp!');
+app.get('/', (req, res) => {  //=>Redirect to URLs page
+  res.redirect('/urls');
 });
 
 app.get('/login', (req, res) => { //=>Render the login page
@@ -77,7 +78,7 @@ app.post('/login', (req, res) => {  //=>Handle login form submission
 });
 
 app.post('/logout', (req, res) => { //=>Clear user_id cookie on logout
-  req.session['user_id'] = null;
+  req.session.user_id = null;
   res.redirect('/urls');
 });
 
