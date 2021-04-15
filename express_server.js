@@ -49,6 +49,12 @@ app.get('/', (req, res) => {  //=>Redirect to URLs page
 
 app.get('/login', (req, res) => { //=>Render the login page
   const user = req.session.user_id;
+
+  if (user) {
+    res.redirect('/urls');
+    return;
+  }
+    
   const templateVars = {user: users[user]};
   res.render('login', templateVars);
 });
@@ -84,6 +90,12 @@ app.post('/logout', (req, res) => { //=>Clear user_id cookie on logout
 
 app.get('/register', (req, res) => {  //=>Render the register page
   const user = req.session.user_id;
+
+  if (user) {
+    res.redirect('/urls');
+    return;
+  }
+
   const templateVars = {user: users[user]};
   res.render('register', templateVars);
 });
@@ -119,6 +131,13 @@ app.get('/urls', (req, res) => {  //=>Render My URLs page
 
 app.post("/urls", (req, res) => { //=> Create new URL
   const user = req.session.user_id;
+  
+  if (!user) {
+    res.statusCode = 401;
+    res.send('Error: Unauthorized');
+    return;
+  }
+  
 
   if (req.body.longURL.startsWith('http://') || req.body.longURL.startsWith('https://')) {
     const shortened = generateRandomString(6);
@@ -129,7 +148,6 @@ app.post("/urls", (req, res) => { //=> Create new URL
     res.send('Error: URL must begin with http:// or https://');
   }
 
-  
 });
 
 app.get("/urls/new", (req, res) => {  //=>Render create new URL page
@@ -145,23 +163,58 @@ app.get("/urls/new", (req, res) => {  //=>Render create new URL page
 });
 
 app.get('/u/:shortURL', (req, res) => { //=>Redirect to long URL
+  
+  if (!urlDatabase[req.params.shortURL]) {
+    res.statusCode = 404;
+    res.send('Error: URL Not Found');
+    return;
+  }
+
   const longURL = urlDatabase[req.params.shortURL].longURL;
+  
   res.redirect(longURL);
 });
 
 app.get("/urls/:shortURL", (req, res) => {  //=>Render short URL update page
   const user = req.session.user_id;
+  
+  if (!urlDatabase[req.params.shortURL]) {
+    res.statusCode = 404;
+    res.send('Error: URL not found');
+    return;
+  }
+  
+  if (!user) {
+    res.statusCode = 401;
+    res.send('Error: Unauthorized');
+    return;
+  }
+
+  if (!urlsForUser(urlDatabase, req)[req.params.shortURL]) {
+    res.statusCode = 401;
+    res.send('Error: Unauthorized');
+    return;
+  }
+
   const templateVars = {user: users[user], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
   res.render("urls_show", templateVars);
 });
 
 app.post('/urls/:shortURL/delete', (req, res) => {  //=>Handle short URL delete
-  const user = req.session.user_id;
-  if (user !== urlDatabase[req.params.shortURL].userID) {
+  
+  if (!user) {
     res.statusCode = 401;
-    res.send('Error: Unauthorized user');
+    res.send('Error: Unauthorized');
     return;
   }
+
+  if (!urlsForUser(urlDatabase, req)[req.params.shortURL]) {
+    res.statusCode = 401;
+    res.send('Error: Unauthorized');
+    return;
+  }
+  
+  const user = req.session.user_id;
 
   delete urlDatabase[req.params.shortURL];
   res.redirect('/urls');
@@ -169,9 +222,15 @@ app.post('/urls/:shortURL/delete', (req, res) => {  //=>Handle short URL delete
 
 app.post('/urls/:shortURL/update', (req, res) => {  //=>Handle short URL update
   const user = req.session.user_id;
-  if (user !== urlDatabase[req.params.shortURL].userID) {
+  if (!user) {
     res.statusCode = 401;
-    res.send('Error: Unauthorized user');
+    res.send('Error: Unauthorized');
+    return;
+  }
+
+  if (!urlsForUser(urlDatabase, req)[req.params.shortURL]) {
+    res.statusCode = 401;
+    res.send('Error: Unauthorized');
     return;
   }
 
