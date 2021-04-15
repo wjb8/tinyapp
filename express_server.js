@@ -121,11 +121,13 @@ app.post('/register', (req, res) => {
   if (formsAreEmpty(req)) {
     res.statusCode = 400;
     res.send('Error: forms are empty');
+    return;
   }
 
   if (getUserByEmail(users, req)) {
     res.statusCode = 403;
     res.send('Error: User already exists');
+    return;
   }
 
   const id = generateRandomString(6);
@@ -144,16 +146,16 @@ app.get('/urls', (req, res) => {
 app.post("/urls", (req, res) => {
   const user = req.cookies['user_id'];
 
-  if (!req.body.longURL.startsWith('http://') || req.body.longURL.startsWith('https://')) {
-    console.log(req.body.longURL.substr(0, 4));
+  if (req.body.longURL.startsWith('http://') || req.body.longURL.startsWith('https://')) {
+    const shortened = generateRandomString(6);
+    urlDatabase[shortened] = {longURL: req.body.longURL, userID: user};
+    res.redirect(`/urls/${shortened}`);
+  } else {
     res.statusCode = 405;
     res.send('Error: URL must begin with http:// or https://');
-    return;
   }
 
-  const shortened = generateRandomString(6);
-  urlDatabase[shortened] = {longURL: req.body.longURL, userID: user};
-  res.redirect(`/urls/${shortened}`);
+  
 });
 
 app.get("/urls/new", (req, res) => {
@@ -199,15 +201,14 @@ app.post('/urls/:shortURL/update', (req, res) => {
     return;
   }
 
-  if (!req.body.longURL.startsWith('http://') || req.body.longURL.startsWith('https://')) {
-    console.log(req.body.longURL.substr(0, 4));
+  if (req.body.longURL.startsWith('http://') || req.body.longURL.startsWith('https://')) {
+    urlDatabase[req.params.shortURL].longURL = req.body.longURL;
+    res.redirect('/urls');
+  } else {
     res.statusCode = 405;
-    res.send('Error: URL must begin with http:// or https://');
-    return;
+    res.send('Error: URL must start with http:// or https://');
   }
 
-  urlDatabase[req.params.shortURL].longURL = req.body.longURL;
-  res.redirect('/urls');
 });
 
 app.get('/urls.json', (req, res) => {
