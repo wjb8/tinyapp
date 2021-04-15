@@ -11,6 +11,9 @@
 <body>
   <%- include('partials/_header') %>
   <main style="margin: 1em;">
+    <% if (!user) { %>
+    <p>Please <a href="/login">login</a> or <a href="/register">register</a> to view your URLs</p>
+    <% } else { %>
     <h3>My URLs</h3>
     <table class="table">
       <thead>
@@ -38,6 +41,7 @@
             </td>
           </tr>
         <% } %>
+    <% } %>
       </tbody>
     </table>
   </main>

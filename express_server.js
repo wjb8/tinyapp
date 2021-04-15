@@ -37,6 +37,17 @@ const checkPassword = (users, req) => {
   return false;
 };
 
+const urlsForUser = (urlDatabase, req) => {
+  let result = {};
+  
+  for (let i in urlDatabase) {
+    if (urlDatabase[i].userID === req.cookies['user_id']) {
+      result[i] = urlDatabase[i];
+    }
+  }
+  return result;
+};
+
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 
@@ -75,6 +86,7 @@ app.post('/login', (req, res) => {
   if (formsAreEmpty(req)) {
     res.statusCode = 400;
     res.send('Error: forms are empty');
+    return;
   }
 
   if (!getUserByEmail(users, req)) {
@@ -124,12 +136,21 @@ app.post('/register', (req, res) => {
 
 app.get('/urls', (req, res) => {
   const user = req.cookies['user_id'];
-  const templateVars = {user: users[user], urls: urlDatabase};
+  const userURLs = urlsForUser(urlDatabase, req);
+  const templateVars = {user: users[user], urls: userURLs};
   res.render('urls_index', templateVars);
 });
 
 app.post("/urls", (req, res) => {
   const user = req.cookies['user_id'];
+
+  if (!req.body.longURL.startsWith('http://') || req.body.longURL.startsWith('https://')) {
+    console.log(req.body.longURL.substr(0, 4));
+    res.statusCode = 405;
+    res.send('Error: URL must begin with http:// or https://');
+    return;
+  }
+
   const shortened = generateRandomString(6);
   urlDatabase[shortened] = {longURL: req.body.longURL, userID: user};
   res.redirect(`/urls/${shortened}`);
@@ -148,23 +169,43 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get('/u/:shortURL', (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   const user = req.cookies['user_id'];
-  console.log(urlDatabase);
   const templateVars = {user: users[user], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
   res.render("urls_show", templateVars);
 });
 
 app.post('/urls/:shortURL/delete', (req, res) => {
+  const user = req.cookies['user_id'];
+  if (user !== urlDatabase[req.params.shortURL].userID) {
+    res.statusCode = 401;
+    res.send('Error: Unauthorized user');
+    return;
+  }
+
   delete urlDatabase[req.params.shortURL];
   res.redirect('/urls');
 });
 
 app.post('/urls/:shortURL/update', (req, res) => {
+  const user = req.cookies['user_id'];
+  if (user !== urlDatabase[req.params.shortURL].userID) {
+    res.statusCode = 401;
+    res.send('Error: Unauthorized user');
+    return;
+  }
+
+  if (!req.body.longURL.startsWith('http://') || req.body.longURL.startsWith('https://')) {
+    console.log(req.body.longURL.substr(0, 4));
+    res.statusCode = 405;
+    res.send('Error: URL must begin with http:// or https://');
+    return;
+  }
+
   urlDatabase[req.params.shortURL].longURL = req.body.longURL;
   res.redirect('/urls');
 });
