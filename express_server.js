@@ -152,6 +152,7 @@ app.post("/urls", (req, res) => { //=> Create new URL
 });
 
 app.get("/urls/new", (req, res) => {  //=>Render create new URL page
+  
   const user = req.session.user_id;
   
   if (!user) {
@@ -177,6 +178,7 @@ app.get('/u/:shortURL', (req, res) => { //=>Redirect to long URL
 });
 
 app.get("/urls/:shortURL", (req, res) => {  //=>Render short URL update page
+  
   const user = req.session.user_id;
   
   if (!urlDatabase[req.params.shortURL]) {
@@ -203,6 +205,8 @@ app.get("/urls/:shortURL", (req, res) => {  //=>Render short URL update page
 
 app.post('/urls/:shortURL/delete', (req, res) => {  //=>Handle short URL delete
   
+  const user = req.session.user_id;
+  
   if (!user) {
     res.statusCode = 401;
     res.send('Error: Unauthorized');
@@ -215,14 +219,15 @@ app.post('/urls/:shortURL/delete', (req, res) => {  //=>Handle short URL delete
     return;
   }
   
-  const user = req.session.user_id;
 
   delete urlDatabase[req.params.shortURL];
   res.redirect('/urls');
 });
 
 app.post('/urls/:shortURL/update', (req, res) => {  //=>Handle short URL update
+  
   const user = req.session.user_id;
+  
   if (!user) {
     res.statusCode = 401;
     res.send('Error: Unauthorized');
